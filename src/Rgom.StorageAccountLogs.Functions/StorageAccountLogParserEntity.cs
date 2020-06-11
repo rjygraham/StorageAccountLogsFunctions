@@ -3,13 +3,12 @@ using Microsoft.Azure.Storage.Auth;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.DurableTask;
 using Newtonsoft.Json;
-using StorageEventFunctions.Models;
-using StorageEventFunctions.Services;
+using Rgom.StorageAccountLogs.Functions.Services;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace StorageEventFunctions
+namespace Rgom.StorageAccountLogs.Functions
 {
 	[JsonObject(MemberSerialization.OptIn)]
 	public class StorageAccountLogParserEntity : IStorageAccountLogParserEntity
@@ -17,24 +16,22 @@ namespace StorageEventFunctions
 		[JsonIgnore]
 		private readonly ICredentialService credentialService;
 
+		[JsonIgnore]
+		private readonly ILogAnalyticsConfigurationService logAnalyticsConfigurationService;
+
 		[JsonProperty("lastLogEntryProcessedTime")]
 		public DateTime LastLogEntryProcessedTime { get; set; }
 
-		[JsonProperty("logProcessingMode")]
-		public LogProcessingMode LogProcessingMode { get; set; }
-
-		[JsonProperty("safeIps")]
-		public HashSet<string> safeIps { get; set; }
-
-		[JsonProperty("safePrincipals")]
-		public HashSet<string> safePrincipals { get; set; }
+		[JsonProperty("logProcessingConfiguration")]
+		public LogProcessingConfiguration LogProcessingConfiguration { get; set; }
 
 		[JsonProperty("Locked")]
 		public bool Locked { get; set; }
 
-		public StorageAccountLogParserEntity(ICredentialService credentialService)
+		public StorageAccountLogParserEntity(ICredentialService credentialService, ILogAnalyticsConfigurationService logAnalyticsConfigurationService)
 		{
 			this.credentialService = credentialService;
+			this.logAnalyticsConfigurationService = logAnalyticsConfigurationService;
 		}
 
 		public void Configure()
@@ -42,7 +39,7 @@ namespace StorageEventFunctions
 			// TODO: Add configuration to control how this Storage Account is processed.
 		}
 
-		public async Task ProcessLogsAsync(LogAnalyticsModel model)
+		public async Task ProcessLogsAsync()
 		{
 			if (!Locked)
 			{
@@ -53,8 +50,33 @@ namespace StorageEventFunctions
 				var storageCredentials = new StorageCredentials(tokenCredentials);
 				var storageAccount = new CloudStorageAccount(storageCredentials, Entity.Current.EntityKey, "core.windows.net", true);
 
-				var processor = new LogProcessor(storageAccount, model.WorkspaceId, model.Key, model.TableName);
-				LastLogEntryProcessedTime = await processor.ProcessLogsAsync(LastLogEntryProcessedTime, LogProcessingMode);
+				// Map 
+				var config = new LogProcessingConfiguration
+				{
+					IgnoredApplicationIds = LogProcessingConfiguration.IgnoredApplicationIds,
+					IgnoredContainers = LogProcessingConfiguration.IgnoredContainers,
+					IgnoredIps = LogProcessingConfiguration.IgnoredIps,
+					IgnoredOperationTypes = LogProcessingConfiguration.IgnoredOperationTypes,
+					IgnoredPrincipals = LogProcessingConfiguration.IgnoredPrincipals,
+
+					LogAnalyticsKey = string.IsNullOrWhiteSpace(LogProcessingConfiguration.LogAnalyticsKey)
+						? logAnalyticsConfigurationService.Key
+						: LogProcessingConfiguration.LogAnalyticsKey,
+
+					LogAnalyticsTable = string.IsNullOrWhiteSpace(LogProcessingConfiguration.LogAnalyticsTable)
+						? logAnalyticsConfigurationService.TableName
+						: LogProcessingConfiguration.LogAnalyticsTable,
+
+					LogAnalyticsWorkspaceId = string.IsNullOrWhiteSpace(LogProcessingConfiguration.LogAnalyticsWorkspaceId)
+						? logAnalyticsConfigurationService.WorkspaceId
+						: LogProcessingConfiguration.LogAnalyticsWorkspaceId,
+
+					LogProcessingMode = LogProcessingConfiguration.LogProcessingMode,
+					ShouldAlwaysLogAnonymousRequests = LogProcessingConfiguration.ShouldAlwaysLogAnonymousRequests
+				};
+
+				var processor = new LogProcessor(storageAccount, config);
+				LastLogEntryProcessedTime = await processor.ProcessLogsAsync(LastLogEntryProcessedTime);
 
 				Locked = false;
 				Entity.Current.SetState(this);
@@ -71,10 +93,20 @@ namespace StorageEventFunctions
 		{
 			if (!ctx.HasState)
 			{
-				ctx.SetState(new StorageAccountLogParserEntity(null)
+				// Setup the logging with some commonsense defaults.
+				ctx.SetState(new StorageAccountLogParserEntity(null, null)
 				{
 					LastLogEntryProcessedTime = DateTime.MinValue.ToUniversalTime(),
-					LogProcessingMode = LogProcessingMode.Complete
+					LogProcessingConfiguration = new LogProcessingConfiguration
+					{
+						LogProcessingMode = LogProcessingMode.Complete,
+						ShouldAlwaysLogAnonymousRequests = true,
+						IgnoredContainers = new HashSet<string>(new string[] { "$logs" }),
+						IgnoredOperationTypes = new HashSet<string>(new string[] { "GetContainerServiceMetadata", "SetContainerMetadata", "GetContainerProperties", "BlobPreflightRequest", "GetBlobMetadata", "GetBlobProperties" }),
+						IgnoredApplicationIds = new HashSet<string>(),
+						IgnoredIps = new HashSet<string>(),
+						IgnoredPrincipals = new HashSet<string>()
+					}
 				});
 			}
 

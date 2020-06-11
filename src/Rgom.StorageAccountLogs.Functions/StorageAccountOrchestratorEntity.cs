@@ -1,11 +1,10 @@
 ﻿using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.DurableTask;
 using Newtonsoft.Json;
-using StorageEventFunctions.Models;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace StorageEventFunctions
+namespace Rgom.StorageAccountLogs.Functions
 {
 	[JsonObject(MemberSerialization.OptIn)]
 	public class StorageAccountOrchestratorEntity : IStorageAccountOrchestratorEntity
@@ -33,7 +32,7 @@ namespace StorageEventFunctions
 			}
 		}
 
-		public async Task ProcessLogsAsync(LogAnalyticsModel model)
+		public async Task ProcessLogsAsync()
 		{
 			if (StorageAccounts == null)
 			{
@@ -43,7 +42,7 @@ namespace StorageEventFunctions
 			foreach (var storageAccountName in StorageAccounts)
 			{
 				var entityId = new EntityId(nameof(StorageAccountLogParserEntity), storageAccountName);
-				Entity.Current.SignalEntity<IStorageAccountLogParserEntity>(entityId, async proxy => await proxy.ProcessLogsAsync(model));
+				Entity.Current.SignalEntity<IStorageAccountLogParserEntity>(entityId, async proxy => await proxy.ProcessLogsAsync());
 			}
 		}
 

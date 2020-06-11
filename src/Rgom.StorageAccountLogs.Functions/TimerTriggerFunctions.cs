@@ -1,11 +1,11 @@
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.DurableTask;
 using Microsoft.Extensions.Logging;
-using StorageEventFunctions.Models;
+using Rgom.StorageAccountLogs.Functions.Services;
 using System;
 using System.Threading.Tasks;
 
-namespace StorageEventFunctions
+namespace Rgom.StorageAccountLogs.Functions
 {
 	public static class TimerTriggerFunctions
 	{
@@ -16,14 +16,8 @@ namespace StorageEventFunctions
 			ILogger log
 		)
 		{
-			var model = new LogAnalyticsModel(
-				Environment.GetEnvironmentVariable("LogAnalyticsWorkspaceId"),
-				Environment.GetEnvironmentVariable("LogAnalyticsKey"),
-				Environment.GetEnvironmentVariable("LogAnalyticsTableName")
-			);
-
 			var entityId = new EntityId(nameof(StorageAccountOrchestratorEntity), "singleton");
-			await client.SignalEntityAsync<IStorageAccountOrchestratorEntity>(entityId, async proxy => await proxy.ProcessLogsAsync(model));
+			await client.SignalEntityAsync<IStorageAccountOrchestratorEntity>(entityId, async proxy => await proxy.ProcessLogsAsync());
 		}
 	}
 }

@@ -1,12 +1,11 @@
-﻿using StorageEventFunctions.Models;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 
-namespace StorageEventFunctions
+namespace Rgom.StorageAccountLogs.Functions
 {
 	public interface IStorageAccountOrchestratorEntity
 	{
 		void AddStorageAccount(string storageAccountName);
 		void RemoveStorageAccount(string storageAccountName);
-		Task ProcessLogsAsync(LogAnalyticsModel model);
+		Task ProcessLogsAsync();
 	}
 }

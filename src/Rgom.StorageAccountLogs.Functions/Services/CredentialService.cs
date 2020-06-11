@@ -3,7 +3,7 @@ using Microsoft.Azure.Storage.Auth;
 using System;
 using System.Threading.Tasks;
 
-namespace StorageEventFunctions.Services
+namespace Rgom.StorageAccountLogs.Functions.Services
 {
 	internal class CredentialService : ICredentialService
 	{

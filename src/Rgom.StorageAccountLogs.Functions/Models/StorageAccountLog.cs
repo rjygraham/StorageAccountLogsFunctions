@@ -1,7 +1,7 @@
 ﻿using CsvHelper.Configuration;
 using System;
 
-namespace StorageEventFunctions.Models
+namespace Rgom.StorageAccountLogs.Functions.Models
 {
 	public class StorageAccountLog
 	{

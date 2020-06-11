@@ -4,7 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace StorageEventFunctions
+namespace Rgom.StorageAccountLogs.Functions
 {
 	class LogDownloader
 	{
@@ -86,10 +86,7 @@ namespace StorageEventFunctions
 			string prefix = GetSearchPrefix(serviceName, startTimeForSearch, endTimeForSearch);
 
 			// List the blobs using the prefix
-			IEnumerable<IListBlobItem> blobs = blobClient.ListBlobs(
-				prefix,
-				true,
-				BlobListingDetails.Metadata);
+			IEnumerable<IListBlobItem> blobs = blobClient.ListBlobs(prefix, true, BlobListingDetails.Metadata);
 
 			// iterate through each blob and figure the start and end times in the metadata
 			foreach (IListBlobItem item in blobs)

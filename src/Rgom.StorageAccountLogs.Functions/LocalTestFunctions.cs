@@ -4,12 +4,10 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.DurableTask;
 using Microsoft.Azure.WebJobs.Extensions.Http;
-using StorageEventFunctions.Models;
-using System;
 using System.Net.Http;
 using System.Threading.Tasks;
 
-namespace StorageEventFunctions
+namespace Rgom.StorageAccountLogs.Functions
 {
 	public static class LocalTestFunctions
 	{
@@ -53,14 +51,8 @@ namespace StorageEventFunctions
 			[DurableClient] IDurableEntityClient client
 		)
 		{
-			var model = new LogAnalyticsModel(
-				Environment.GetEnvironmentVariable("LogAnalyticsWorkspaceId"),
-				Environment.GetEnvironmentVariable("LogAnalyticsKey"),
-				Environment.GetEnvironmentVariable("LogAnalyticsTableName")
-			);
-
 			var entityId = new EntityId(nameof(StorageAccountOrchestratorEntity), "singleton");
-			await client.SignalEntityAsync<IStorageAccountOrchestratorEntity>(entityId, async proxy => await proxy.ProcessLogsAsync(model));
+			await client.SignalEntityAsync<IStorageAccountOrchestratorEntity>(entityId, async proxy => await proxy.ProcessLogsAsync());
 		}
 	}
 }

@@ -1,21 +1,22 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using System;
 
-namespace StorageEventFunctions
+namespace Rgom.StorageAccountLogs.Functions.Models
 {
 	/// <summary>
 	/// Represents a LogMessage from Azure Storage Diagnostics
 	/// </summary>
-	[Serializable]
+	[JsonObject(ItemNullValueHandling = NullValueHandling.Ignore)]
 	public class LogMessage
 	{
-		public string RequestTime;
-		public string OriginIp;
-		public string Url;
-		public string RequestType;
-		public string UserAgent;
-		public string AuthenticationType;
-		public string ApplicationId;
-		public string UserPrincipalName;
+		public string RequestTime { get; set; }
+		public string OriginIp { get; set; }
+		public string AuthenticationType { get; set; }
+		public string RequestType { get; set; }
+		public string Url { get; set; }
+		public string UserAgent { get; set; }
+		public string ApplicationId { get; set; }
+		public string UserPrincipalName { get; set; }
 
 		public override bool Equals(object obj)
 		{

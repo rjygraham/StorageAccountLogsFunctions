@@ -2,6 +2,7 @@
 using CsvHelper.Configuration;
 using HTTPDataCollectorAPI;
 using Microsoft.Azure.Storage;
+using Rgom.StorageAccountLogs.Functions.Models;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -11,7 +12,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace StorageEventFunctions.Models
+namespace Rgom.StorageAccountLogs.Functions
 {
 	internal class LogProcessor
 	{
@@ -36,22 +37,22 @@ namespace StorageEventFunctions.Models
 
 		private readonly CloudStorageAccount storageAccount;
 		private readonly Collector collector;
-		private readonly string logAnalyticsTableName;
+		private readonly LogProcessingConfiguration logProcessingConfiguration;
 
 		private Task getLogsTask;
 		private Task<DateTime> evaluateLogsTask;
 
-		public LogProcessor(CloudStorageAccount storageAccount, string logAnalyticsWorkspaceId, string logAnalyticsKey, string logAnalyticsTableName)
+		public LogProcessor(CloudStorageAccount storageAccount, LogProcessingConfiguration logProcessingConfiguration)
 		{
 			this.storageAccount = storageAccount;
-			this.collector = new Collector(logAnalyticsWorkspaceId, logAnalyticsKey);
-			this.logAnalyticsTableName = logAnalyticsTableName;
+			this.collector = new Collector(logProcessingConfiguration.LogAnalyticsWorkspaceId, logProcessingConfiguration.LogAnalyticsKey);
+			this.logProcessingConfiguration = logProcessingConfiguration;
 		}
 
-		public async Task<DateTime> ProcessLogsAsync(DateTime lastLogEntryProcessedTime, LogProcessingMode logProcessingMode)
+		public async Task<DateTime> ProcessLogsAsync(DateTime lastLogEntryProcessedTime)
 		{
 			getLogsTask = Task.Run(() => GetLogs(lastLogEntryProcessedTime));
-			evaluateLogsTask = Task.Run(() => EvaluateLogs(lastLogEntryProcessedTime, logProcessingMode));
+			evaluateLogsTask = Task.Run(() => EvaluateLogs(lastLogEntryProcessedTime, logProcessingConfiguration.LogProcessingMode));
 
 			using (var exitEvent = new ManualResetEvent(false))
 			{
@@ -67,7 +68,7 @@ namespace StorageEventFunctions.Models
 							messages.Add(message);
 						}
 
-						if (logProcessingMode == LogProcessingMode.Complete)
+						if (logProcessingConfiguration.LogProcessingMode == LogProcessingMode.Complete)
 						{
 							await CollectCompleteLogsAsync(messages);
 						}
@@ -169,15 +170,48 @@ namespace StorageEventFunctions.Models
 
 		private void EvaluatedCompleteLog(StorageAccountLog log)
 		{
-			// TODO: Exclude logs from known IPs
-			// TODO: Exclude logs from  known UPNs
-			// TODO: Exclude logs with specific Operation Types
+			var ipAddress = log.RequesterIpAddress.Substring(0, log.RequesterIpAddress.IndexOf(':'));
+
+			// If request is anonymous and logging all anonymous requests is enabled, skip the bypass rules.
+			if (!(log.AuthenticationType.Equals("anonymous", StringComparison.OrdinalIgnoreCase) && logProcessingConfiguration.ShouldAlwaysLogAnonymousRequests))
+			{
+				// Ignore specific operations.
+				if (logProcessingConfiguration.IgnoredOperationTypes != null && logProcessingConfiguration.IgnoredOperationTypes.Contains(log.OperationType))
+				{
+					return;
+				}
+
+				// Ignore specific containers.
+				var requestedObjectKeyParts = log.RequestedObjectKey.Split('/');
+				if (logProcessingConfiguration.IgnoredContainers != null && requestedObjectKeyParts.Length >= 3 && logProcessingConfiguration.IgnoredContainers.Contains(log.RequestedObjectKey.Split('/')[2]))
+				{
+					return;
+				}
+
+				// Ignore specific IP addresses.
+				if (logProcessingConfiguration.IgnoredIps != null && logProcessingConfiguration.IgnoredIps.Contains(ipAddress))
+				{
+					return;
+				}
+
+				// Ignore specific user principals.
+				if (logProcessingConfiguration.IgnoredPrincipals != null && logProcessingConfiguration.IgnoredPrincipals.Contains(log.UserPrincipalName))
+				{
+					return;
+				}
+
+				// Ignore specific application Ids.
+				if (logProcessingConfiguration.IgnoredApplicationIds != null && logProcessingConfiguration.IgnoredApplicationIds.Contains(log.ApplicationId))
+				{
+					return;
+				}
+			}
 
 			evaluatedLogMessages.Enqueue(new LogMessage
 			{
 				RequestTime = log.RequestStartTime.ToString(),
 				Url = log.RequestUrl,
-				OriginIp = log.RequesterIpAddress.Substring(0, log.RequesterIpAddress.IndexOf(':')),
+				OriginIp = ipAddress,
 				RequestType = log.OperationType,
 				UserAgent = log.UserAgentHeader,
 				AuthenticationType = log.AuthenticationType,
@@ -246,7 +280,7 @@ namespace StorageEventFunctions.Models
 		{
 			if (messages.Count > 0)
 			{
-				await collector.Collect(logAnalyticsTableName, messages);
+				await collector.Collect(logProcessingConfiguration.LogAnalyticsTable, messages);
 			}
 		}
 
@@ -258,7 +292,7 @@ namespace StorageEventFunctions.Models
 			{
 				try
 				{
-					await collector.Collect(logAnalyticsTableName, listOfIps);
+					await collector.Collect(logProcessingConfiguration.LogAnalyticsTable, listOfIps);
 				}
 				catch (Exception ex)
 				{
