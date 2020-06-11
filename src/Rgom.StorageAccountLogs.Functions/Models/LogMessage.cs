@@ -13,6 +13,8 @@ namespace Rgom.StorageAccountLogs.Functions.Models
 		public string OriginIp { get; set; }
 		public string AuthenticationType { get; set; }
 		public string RequestType { get; set; }
+		public string RequestStatus { get; set; }
+		public int HttpStatusCode { get; set; }
 		public string Url { get; set; }
 		public string UserAgent { get; set; }
 		public string ApplicationId { get; set; }

@@ -213,6 +213,8 @@ namespace Rgom.StorageAccountLogs.Functions
 				Url = log.RequestUrl,
 				OriginIp = ipAddress,
 				RequestType = log.OperationType,
+				RequestStatus = log.RequestStatus,
+				HttpStatusCode = log.HttpStatusCode,
 				UserAgent = log.UserAgentHeader,
 				AuthenticationType = log.AuthenticationType,
 				ApplicationId = log.ApplicationId,
@@ -241,8 +243,12 @@ namespace Rgom.StorageAccountLogs.Functions
 						Url = log.RequestUrl,
 						OriginIp = log.RequesterIpAddress.Substring(0, log.RequesterIpAddress.IndexOf(':')),
 						RequestType = log.OperationType,
+						RequestStatus = log.RequestStatus,
+						HttpStatusCode = log.HttpStatusCode,
+						UserAgent = log.UserAgentHeader,
 						AuthenticationType = log.AuthenticationType,
-						UserAgent = log.UserAgentHeader
+						ApplicationId = log.ApplicationId,
+						UserPrincipalName = log.UserPrincipalName
 					};
 
 					if (sentinelIgnoredIps.Contains(msg.OriginIp))
