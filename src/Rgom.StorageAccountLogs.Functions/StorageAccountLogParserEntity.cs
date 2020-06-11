@@ -34,9 +34,9 @@ namespace Rgom.StorageAccountLogs.Functions
 			this.logAnalyticsConfigurationService = logAnalyticsConfigurationService;
 		}
 
-		public void Configure()
+		public void Configure(LogProcessingConfiguration logProcessingConfiguration)
 		{
-			// TODO: Add configuration to control how this Storage Account is processed.
+			LogProcessingConfiguration = logProcessingConfiguration;
 		}
 
 		public async Task ProcessLogsAsync()
@@ -96,17 +96,17 @@ namespace Rgom.StorageAccountLogs.Functions
 				// Setup the logging with some commonsense defaults.
 				ctx.SetState(new StorageAccountLogParserEntity(null, null)
 				{
-					LastLogEntryProcessedTime = DateTime.MinValue.ToUniversalTime(),
-					LogProcessingConfiguration = new LogProcessingConfiguration
-					{
-						LogProcessingMode = LogProcessingMode.Complete,
-						ShouldAlwaysLogAnonymousRequests = true,
-						IgnoredContainers = new HashSet<string>(new string[] { "$logs" }),
-						IgnoredOperationTypes = new HashSet<string>(new string[] { "GetContainerServiceMetadata", "SetContainerMetadata", "GetContainerProperties", "BlobPreflightRequest", "GetBlobMetadata", "GetBlobProperties" }),
-						IgnoredApplicationIds = new HashSet<string>(),
-						IgnoredIps = new HashSet<string>(),
-						IgnoredPrincipals = new HashSet<string>()
-					}
+					LastLogEntryProcessedTime = new DateTime(1970, 1, 1).ToUniversalTime()
+					//LogProcessingConfiguration = new LogProcessingConfiguration
+					//{
+					//	LogProcessingMode = LogProcessingMode.Complete,
+					//	ShouldAlwaysLogAnonymousRequests = true,
+					//	IgnoredContainers = new HashSet<string>(new string[] { "$logs" }),
+					//	IgnoredOperationTypes = new HashSet<string>(new string[] { "GetContainerServiceMetadata", "SetContainerMetadata", "GetContainerProperties", "BlobPreflightRequest", "GetBlobMetadata", "GetBlobProperties" }),
+					//	IgnoredApplicationIds = new HashSet<string>(),
+					//	IgnoredIps = new HashSet<string>(),
+					//	IgnoredPrincipals = new HashSet<string>()
+					//}
 				});
 			}
 

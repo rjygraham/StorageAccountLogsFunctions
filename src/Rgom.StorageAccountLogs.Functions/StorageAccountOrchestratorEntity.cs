@@ -1,6 +1,7 @@
 ﻿using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.DurableTask;
 using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
@@ -12,13 +13,13 @@ namespace Rgom.StorageAccountLogs.Functions
 		[JsonProperty("storageAccounts")]
 		public HashSet<string> StorageAccounts { get; set; }
 
-		public void AddStorageAccount(string storageAccountName)
+		public void AddStorageAccount(Tuple<string, LogProcessingConfiguration> storageAccountConfig)
 		{
-			if (!StorageAccounts.Contains(storageAccountName))
+			if (!StorageAccounts.Contains(storageAccountConfig.Item1))
 			{
-				var entityId = new EntityId(nameof(StorageAccountLogParserEntity), storageAccountName);
-				Entity.Current.SignalEntity<IStorageAccountLogParserEntity>(entityId, proxy => proxy.Configure());
-				StorageAccounts.Add(storageAccountName);
+				var entityId = new EntityId(nameof(StorageAccountLogParserEntity), storageAccountConfig.Item1);
+				Entity.Current.SignalEntity<IStorageAccountLogParserEntity>(entityId, proxy => proxy.Configure(storageAccountConfig.Item2));
+				StorageAccounts.Add(storageAccountConfig.Item1);
 			}
 		}
 
