@@ -25,9 +25,10 @@ namespace Rgom.StorageAccountLogs.Functions
 				Delimiter = ";",
 				Escape = '"',
 				IgnoreQuotes = false,
-				HasHeaderRecord = false,
+				HasHeaderRecord = false
 			};
 
+			config.MissingFieldFound = (header, index, ctx) => { /* Ignore missing fields. This would be caused from v1 logs instead of v2 */ };
 			config.RegisterClassMap<StorageAccountLogMap>();
 		}
 
