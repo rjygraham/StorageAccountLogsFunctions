@@ -11,6 +11,7 @@ namespace Rgom.StorageAccountLogs.Functions.Models
 	{
 		public string RequestTime { get; set; }
 		public string OriginIp { get; set; }
+		public string StorageAccount { get; set; }
 		public string AuthenticationType { get; set; }
 		public string RequestType { get; set; }
 		public string RequestStatus { get; set; }

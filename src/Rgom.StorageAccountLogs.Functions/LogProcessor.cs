@@ -211,6 +211,7 @@ namespace Rgom.StorageAccountLogs.Functions
 			evaluatedLogMessages.Enqueue(new LogMessage
 			{
 				RequestTime = log.RequestStartTime.ToString(),
+				StorageAccount = log.OwnerAccountName,
 				Url = log.RequestUrl,
 				OriginIp = ipAddress,
 				RequestType = log.OperationType,
@@ -225,12 +226,13 @@ namespace Rgom.StorageAccountLogs.Functions
 
 		private void EvaluatedSentinelLog(StorageAccountLog log)
 		{
+			var ipAddress =  log.RequesterIpAddress.Substring(0, log.RequesterIpAddress.IndexOf(':'));
+
 			// now we have a full logentry to process
 			switch (log.OperationType)
 			{
 				case "PutBlob":
-					var ip = log.RequesterIpAddress.Substring(0, log.RequesterIpAddress.IndexOf(':'));
-					sentinelIgnoredIps.Add(ip);
+					sentinelIgnoredIps.Add(ipAddress);
 					break;
 				case "ListBlobs":
 				case "ListContainers":
@@ -241,8 +243,9 @@ namespace Rgom.StorageAccountLogs.Functions
 					var msg = new LogMessage
 					{
 						RequestTime = log.RequestStartTime.ToString(),
+						StorageAccount = log.OwnerAccountName,
 						Url = log.RequestUrl,
-						OriginIp = log.RequesterIpAddress.Substring(0, log.RequesterIpAddress.IndexOf(':')),
+						OriginIp = ipAddress,
 						RequestType = log.OperationType,
 						RequestStatus = log.RequestStatus,
 						HttpStatusCode = log.HttpStatusCode,
